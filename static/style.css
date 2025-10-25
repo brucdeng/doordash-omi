@@ -1,0 +1,35 @@
+/* Custom styles for OMI DoorDash App */
+.voice-animation {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.order-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.order-card:hover {
+    transform: translateY(-2px);
+}
+
+.voice-command {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+}
+
+.restaurant-card {
+    border-left: 4px solid #ff6b35;
+}
+
+.menu-item {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.menu-item:last-child {
+    border-bottom: none;
+}
