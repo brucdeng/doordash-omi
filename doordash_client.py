@@ -14,25 +14,22 @@ logger = logging.getLogger(__name__)
 
 class DoorDashClient:
     def __init__(self):
-        # DoorDash API configuration
-        self.api_key = os.getenv("DOORDASH_API_KEY", "")
+        # DoorDash Drive API configuration
+        self.access_key = os.getenv("DOORDASH_ACCESS_KEY", "")
         self.base_url = os.getenv("DOORDASH_BASE_URL", "https://openapi.doordash.com")
-        self.client_id = os.getenv("DOORDASH_CLIENT_ID", "")
-        self.client_secret = os.getenv("DOORDASH_CLIENT_SECRET", "")
         
-        # API endpoints
+        # Drive API endpoints
         self.endpoints = {
-            "search_restaurants": "/v2/restaurants/search",
-            "get_menu": "/v2/restaurants/{restaurant_id}/menu",
-            "create_order": "/v2/orders",
-            "get_order": "/v2/orders/{order_id}",
-            "get_delivery_quote": "/v2/delivery_quotes"
+            "create_delivery": "/drive/v2/deliveries",
+            "get_delivery": "/drive/v2/deliveries/{delivery_id}",
+            "update_delivery": "/drive/v2/deliveries/{delivery_id}",
+            "cancel_delivery": "/drive/v2/deliveries/{delivery_id}/cancel"
         }
     
     async def _make_request(self, method: str, endpoint: str, data: Dict = None, params: Dict = None) -> Dict:
-        """Make authenticated request to DoorDash API"""
+        """Make authenticated request to DoorDash Drive API"""
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {self.access_key}",
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
@@ -61,90 +58,78 @@ class DoorDashClient:
     async def search_restaurants(self, query: str, location: str = "", limit: int = 10) -> List[Dict]:
         """
         Search for restaurants based on food item and location
+        Note: Drive API doesn't have restaurant search - this uses mock data
         """
         try:
-            # For demo purposes, return mock data if no API key
-            if not self.api_key:
-                return self._get_mock_restaurants(query)
-            
-            params = {
-                "query": query,
-                "location": location,
-                "limit": limit
-            }
-            
-            response = await self._make_request("GET", self.endpoints["search_restaurants"], params=params)
-            return response.get("restaurants", [])
+            # Drive API doesn't provide restaurant search functionality
+            # Return mock data for demonstration
+            return self._get_mock_restaurants(query)
             
         except Exception as e:
             logger.error(f"Error searching restaurants: {str(e)}")
-            # Return mock data as fallback
             return self._get_mock_restaurants(query)
     
     async def get_menu_items(self, restaurant_id: str) -> List[Dict]:
         """
         Get menu items for a specific restaurant
+        Note: Drive API doesn't have menu functionality - this uses mock data
         """
         try:
-            # For demo purposes, return mock data if no API key
-            if not self.api_key:
-                return self._get_mock_menu_items(restaurant_id)
-            
-            endpoint = self.endpoints["get_menu"].format(restaurant_id=restaurant_id)
-            response = await self._make_request("GET", endpoint)
-            return response.get("menu_items", [])
+            # Drive API doesn't provide menu functionality
+            # Return mock data for demonstration
+            return self._get_mock_menu_items(restaurant_id)
             
         except Exception as e:
             logger.error(f"Error getting menu items: {str(e)}")
-            # Return mock data as fallback
             return self._get_mock_menu_items(restaurant_id)
     
-    async def create_order(self, restaurant_id: str, items: List[Dict], delivery_address: str, user_id: str) -> Dict:
+    async def create_delivery(self, pickup_address: str, dropoff_address: str, pickup_phone: str, dropoff_phone: str, external_delivery_id: str) -> Dict:
         """
-        Create a new order
+        Create a new delivery using DoorDash Drive API
         """
         try:
-            # For demo purposes, return mock response if no API key
-            if not self.api_key:
-                return self._get_mock_order_response(restaurant_id, items)
+            # For demo purposes, return mock response if no access key
+            if not self.access_key:
+                return self._get_mock_delivery_response(external_delivery_id)
             
-            order_data = {
-                "restaurant_id": restaurant_id,
-                "items": items,
-                "delivery_address": delivery_address,
-                "user_id": user_id,
-                "external_delivery_id": f"OMI-{user_id}-{int(datetime.now().timestamp())}"
+            delivery_data = {
+                "external_delivery_id": external_delivery_id,
+                "pickup_address": pickup_address,
+                "pickup_phone_number": pickup_phone,
+                "dropoff_address": dropoff_address,
+                "dropoff_phone_number": dropoff_phone
             }
             
-            response = await self._make_request("POST", self.endpoints["create_order"], data=order_data)
+            response = await self._make_request("POST", self.endpoints["create_delivery"], data=delivery_data)
             return {
                 "success": True,
-                "order_id": response.get("order_id"),
-                "estimated_delivery": response.get("estimated_delivery"),
-                "total_price": response.get("total_price")
+                "delivery_id": response.get("id"),
+                "external_delivery_id": response.get("external_delivery_id"),
+                "status": response.get("delivery_status"),
+                "estimated_delivery": response.get("estimated_delivery_time")
             }
             
         except Exception as e:
-            logger.error(f"Error creating order: {str(e)}")
+            logger.error(f"Error creating delivery: {str(e)}")
             return {
                 "success": False,
                 "error": str(e)
             }
     
-    async def get_order_status(self, order_id: str) -> Dict:
+    async def get_delivery_status(self, delivery_id: str) -> Dict:
         """
-        Get the status of an order
+        Get the status of a delivery
         """
         try:
-            if not self.api_key:
-                return self._get_mock_order_status(order_id)
+            if not self.access_key:
+                return self._get_mock_delivery_status(delivery_id)
             
-            endpoint = self.endpoints["get_order"].format(order_id=order_id)
+            endpoint = self.endpoints["get_delivery"].format(delivery_id=delivery_id)
             response = await self._make_request("GET", endpoint)
             return response
             
         except Exception as e:
-            logger.error(f"Error getting order status: {str(e)}")
+            logger.error(f"Error getting delivery status: {str(e)}")
             return {"status": "error", "message": str(e)}
     
     async def get_delivery_quote(self, restaurant_id: str, delivery_address: str) -> Dict:
@@ -237,26 +222,26 @@ class DoorDashClient:
             }
         ]
     
-    def _get_mock_order_response(self, restaurant_id: str, items: List[Dict]) -> Dict:
-        """Mock order response for testing"""
-        total_price = sum(item.get("price", 0) for item in items)
+    def _get_mock_delivery_response(self, external_delivery_id: str) -> Dict:
+        """Mock delivery response for testing"""
         estimated_delivery = (datetime.now() + timedelta(minutes=30)).isoformat()
         
         return {
             "success": True,
-            "order_id": f"ORDER-{int(datetime.now().timestamp())}",
-            "estimated_delivery": estimated_delivery,
-            "total_price": total_price,
-            "restaurant_id": restaurant_id
+            "delivery_id": f"DELIVERY-{int(datetime.now().timestamp())}",
+            "external_delivery_id": external_delivery_id,
+            "status": "delivery_created",
+            "estimated_delivery": estimated_delivery
         }
     
-    def _get_mock_order_status(self, order_id: str) -> Dict:
-        """Mock order status for testing"""
+    def _get_mock_delivery_status(self, delivery_id: str) -> Dict:
+        """Mock delivery status for testing"""
         return {
-            "order_id": order_id,
-            "status": "confirmed",
+            "delivery_id": delivery_id,
+            "status": "enroute_to_pickup",
             "estimated_delivery": (datetime.now() + timedelta(minutes=25)).isoformat(),
-            "restaurant_name": "Tony's Pizza Palace"
+            "pickup_address": "1000 4th Ave, Seattle, WA, 98104",
+            "dropoff_address": "1201 3rd Ave, Seattle, WA, 98101"
         }
     
     def _get_mock_delivery_quote(self) -> Dict:
